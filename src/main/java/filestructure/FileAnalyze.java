@@ -30,6 +30,28 @@ public class FileAnalyze {
         cf.interfaces_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i += 2, (short) 0,0, 2));
         cf.interfaces = new short[cf.interfaces_count];
         i = readInterfaces(b, i, cf.interfaces);
+        cf.fields_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
+        i = readFields(b, i += 2, cf.fields_count, cf.fields);
+        cf.methods_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
+        i = readMethods(b, i += 2, cf.methods_count, cf.methods);
+        cf.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
+        i = readAttributeInfo(b, i += 2, cf.attributes_count, cf.attributes);
+    }
+    int readMethods(byte[] bytes, int i, short len, METHOD_info[] cfm){
+        cfm = new METHOD_info[len];
+        AtomicInteger ai = new AtomicInteger(i);
+        for(int j = 0; j < len; ++j){
+            cfm[j] = new METHOD_info(bytes, ai);
+        }
+        return ai.get();
+    }
+    int readFields(byte[] bytes, int i, short field_count, FIELD_info[] cff){
+        cff = new FIELD_info[field_count];
+        AtomicInteger ai = new AtomicInteger(i);
+        for(int j = 0; j < field_count; ++j){
+            cff[j] = new FIELD_info(bytes, ai);
+        }
+        return ai.get();
     }
     int readInterfaces(byte[] bytes, int i, short[] cfinf){
         for(int j = 0; j < cfinf.length; ++j){
@@ -42,6 +64,14 @@ public class FileAnalyze {
         AtomicInteger ii = new AtomicInteger(i);
         for (int j = 0; j < size; ++j){
             constant_pool[j] = getConstant(bytes, ii);
+        }
+        return ii.get();
+    }
+    int readAttributeInfo(byte[] bytes, int i, short len, ATTRIBUTE_info[] attri){
+        attri = new ATTRIBUTE_info[len];
+        AtomicInteger ii = new AtomicInteger(i);
+        for(int j = 0; j < len; ++j){
+            attri[j] = new ATTRIBUTE_info(bytes, ii);
         }
         return ii.get();
     }
@@ -58,11 +88,11 @@ public class FileAnalyze {
         short interfaces_count;
         short interfaces[];
         short fields_count;
-        //field_info fields[fields_count];
+        FIELD_info fields[];
         short methods_count;
-        //method_info methods[methods_count];
+        METHOD_info methods[];//[methods_count];
         short attributes_count;
-        //attribute_info attributes[attributes_count];
+        ATTRIBUTE_info attributes[];//[attributes_count];
     }
     CONSTANT_info getConstant(byte[] bytes, AtomicInteger ii){
         //int i = ii;
@@ -151,7 +181,57 @@ public class FileAnalyze {
         }
         return constant_info;
     }
-
+    private class METHOD_info{
+        short access_flag;
+        short name_index;
+        short descriptor_index;
+        short attributes_count;
+        ATTRIBUTE_info attributes[];
+        METHOD_info(byte[] bytes, AtomicInteger ii){
+            this.access_flag = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get(), (short) 0,0, 2));
+            this.name_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 2, (short) 0,0, 2));
+            this.descriptor_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 4, (short) 0,0, 2));
+            this.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 6, (short) 0,0, 2));
+            attributes = new ATTRIBUTE_info[this.attributes_count];
+            ii.set(ii.get() + 8);
+            for(int j = 0; j < this.attributes_count; ++j){
+                attributes[j] = new ATTRIBUTE_info(bytes, ii);
+            }
+        }
+    }
+    private class FIELD_info{
+        short access_flag;
+        short name_index;
+        short descriptor_index;
+        short attributes_count;
+        ATTRIBUTE_info attributes[];
+        FIELD_info(byte[] bytes, AtomicInteger ii){
+            this.access_flag = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get(), (short) 0,0, 2));
+            this.name_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 2, (short) 0,0, 2));
+            this.descriptor_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 4, (short) 0,0, 2));
+            this.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 6, (short) 0,0, 2));
+            attributes = new ATTRIBUTE_info[this.attributes_count];
+            ii.set(ii.get() + 8);
+            for(int j = 0; j < this.attributes_count; ++j){
+                attributes[j] = new ATTRIBUTE_info(bytes, ii);
+            }
+        }
+    }
+    private class ATTRIBUTE_info{
+        short attribute_name_index;
+        int attribute_length;
+        byte info[];//size = attribute_length
+        ATTRIBUTE_info(byte[] bytes, AtomicInteger ii){
+            this.attribute_name_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get(), (short) 0,0, 2));
+            this.attribute_length = Integer.reverseBytes(Conversion.byteArrayToInt(bytes, ii.get() + 2, 0, 0, 4));
+            ii.set(ii.get() + 6);
+            info = new byte[this.attribute_length];
+            for(int j = 0; j < this.attribute_length; ++j){
+                info[j] = bytes[ii.get() + j];
+            }
+            ii.set(ii.get() + this.attribute_length);
+        }
+    }
     private abstract class CONSTANT_info{
         byte tag;
         int size = 1;
