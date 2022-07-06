@@ -1,8 +1,11 @@
 package filestructure;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,6 +16,90 @@ public class FileAnalyze {
     public FileAnalyze(byte[] file){
         classFile = new ClassFile();
         readStruct(classFile, file);
+        printClassFileStruct(classFile);
+    }
+    void printClassFileStruct(ClassFile cf){
+        System.out.println("magic: " + Integer.toHexString(cf.magic));
+        System.out.println(String.format("minor version: %d, major version: %d", cf.minor_version, cf.major_version));
+        System.out.println("Constant pool size: " + cf.constant_pool_count);
+        printConstantPool(cf);
+    }
+    void printConstantPool(ClassFile cf){
+        for(int i = 0; i < cf.constant_pool.length; ++i){
+            switch (cf.constant_pool[i].tag){
+                case (byte) 7:
+                    CONSTANT_Class_info cci = (CONSTANT_Class_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tag %x: %s, name index: %d, size: %d",
+                            i + 1, cci.tag, cci.name, cci.name_index, cci.size));
+                    break;
+                case (byte) 9:
+                    CONSTANT_Fieldref_info cfi = (CONSTANT_Fieldref_info)cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, name and type index: %d, class index: %d," +
+                                    " size: %d",
+                            i + 1, cfi.tag, cfi.name, cfi.name_and_type_index, cfi.class_index, cfi.size));
+                    break;
+                case (byte) 10:
+                    CONSTANT_Methodref_info cmi = (CONSTANT_Methodref_info)cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, name and tag index: %d, class index: %d, size: %d",
+                            i + 1, cmi.tag, cmi.name, cmi.name_and_type_index, cmi.class_index, cmi.size));
+                    break;
+                case (byte) 11:
+                    CONSTANT_InterfaceMethodref_info cimi = (CONSTANT_InterfaceMethodref_info)cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, name and tag index: %d, class index: %d, size: %d",
+                            i + 1, cimi.tag, cimi.name, cimi.name_and_type_index, cimi.class_index, cimi.size));
+                    break;
+                case (byte) 8:
+                    CONSTANT_String_info csi = (CONSTANT_String_info)cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, string index: %d, size: %d",
+                            i + 1, csi.tag, csi.name, csi.string_index, csi.size));
+                    break;
+                case (byte) 3:
+                    CONSTANT_Integer_info cii = (CONSTANT_Integer_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, bytes: %x, size: %d",
+                            i + 1, cii.tag, cii.name, cii.bytes, cii.size));
+                    break;
+                case (byte) 4:
+                    CONSTANT_Float_info cfii = (CONSTANT_Float_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, bytes: %x, size: %d",
+                            i + 1, cfii.tag, cfii.name, cfii.bytes, cfii.size));
+                    break;
+                case (byte) 5:
+                    CONSTANT_Long_info cli = (CONSTANT_Long_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, high bytes: %x, low bytes: %x, size: %d",
+                            i + 1, cli.tag, cli.name, cli.high_bytes, cli.low_bytes, cli.size));
+                    break;
+                case (byte) 6:
+                    CONSTANT_Double_info cdi = (CONSTANT_Double_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, high bytes: %x, low bytes: %x, size: %d",
+                            i + 1, cdi.tag, cdi.name, cdi.high_bytes, cdi.low_bytes, cdi.size));
+                    break;
+                case (byte) 12:
+                    CONSTANT_NameAndType_info cnati = (CONSTANT_NameAndType_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, name index: %d, descriptor index: %d, size: %d",
+                            i + 1, cnati.tag, cnati.name, cnati.name_index, cnati.descriptor_index, cnati.size));
+                    break;
+                case (byte) 1:
+                    CONSTANT_Utf8_info cu8i = (CONSTANT_Utf8_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, len byte arr: %d, byte string: \"%s\", size: %d",
+                            i + 1, cu8i.tag, cu8i.name, cu8i.length, new String(cu8i.bytes, StandardCharsets.UTF_8), cu8i.size));
+                    break;
+                case (byte) 15:
+                    CONSTANT_MethodHandle_info cmhi = (CONSTANT_MethodHandle_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, reference index: %d, reference kind: %x, size: %d",
+                            i + 1, cmhi.tag, cmhi.name, cmhi.reference_index, cmhi.reference_kind, cmhi.size));
+                    break;
+                case (byte) 16:
+                    CONSTANT_MethodType_info cmti = (CONSTANT_MethodType_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, descriptor index: %d, size: %d",
+                            i + 1, cmti.tag, cmti.name, cmti.descriptor_index, cmti.size));
+                    break;
+                case (byte) 18:
+                    CONSTANT_InvokeDynamic_info cidi = (CONSTANT_InvokeDynamic_info) cf.constant_pool[i];
+                    System.out.println(String.format("index %d, tad %x: %s, name and type index: %d, bootstrap method attr index: %d, size: %d",
+                            i + 1, cidi.tag, cidi.name, cidi.name_and_type_index, cidi.bootstrap_method_attr_index, cidi.size));
+                    break;
+            }
+        }
     }
     void readStruct(ClassFile cf, byte[] b){
         int i = 0;
