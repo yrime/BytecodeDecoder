@@ -2,6 +2,7 @@ package filestructure;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -23,6 +24,54 @@ public class FileAnalyze {
         System.out.println(String.format("minor version: %d, major version: %d", cf.minor_version, cf.major_version));
         System.out.println("Constant pool size: " + cf.constant_pool_count);
         printConstantPool(cf);
+        System.out.println("Access flags: " + AccessFlags.getStringAccFlag(cf.access_flags));
+        System.out.println("This class: " + cf.this_class + ", " + printClassInfo(cf, cf.this_class));
+        System.out.println(String.format("Super class: %s, %s", cf.super_class, printClassInfo(cf, cf.super_class)));
+        System.out.println("Interface count: " + cf.interfaces_count);
+        System.out.println("Interfaces: " + printInterfaces(cf));
+        System.out.println("Fields count: " + cf.fields_count);
+        System.out.println(printFelds(cf));
+        System.out.println("Methods count: " + cf.methods_count);
+        System.out.println("Methods:" + printMethods(cf, cf.methods));
+        System.out.println("Attributes count: " + cf.attributes_count);
+        System.out.println("Attributes: " + printAttributInfo(cf, cf.attributes));
+    }
+    String printMethods(ClassFile cf, METHOD_info[] mi){
+        String out = "";
+        for(int i = 0; i < mi.length; ++i){
+            out += String.format("\n\tMethod %d, Access flags %x: %s, Name index %d: %s, Descriptor index %d: %s," +
+                            "Attributes count %d, Attributes: \n\t%s", i, mi[i].access_flag,
+                    AccessFlagsMethod.getStringAccFlag(mi[i].access_flag), mi[i].name_index, printUtf8(cf, mi[i].name_index),
+                    mi[i].descriptor_index, printUtf8(cf, mi[i].descriptor_index), mi[i].attributes_count,
+                    printAttributInfo(cf, mi[i].attributes));
+        }
+        return out;
+    }
+    String printFelds(ClassFile cf){
+        String out = "";
+        for(int i = 0; i < cf.fields.length; ++i){
+            out += String.format("%d -- Access flags field %x: %s, Name index %d: %s, Descriptor index %d: %s, Attribute info: %s\n",
+                    i, cf.fields[i].access_flag, AccessFlagsField.getStringAccFlag(cf.fields[i].access_flag), cf.fields[i].name_index,
+                    printUtf8(cf, cf.fields[i].name_index), cf.fields[i].descriptor_index, printUtf8(cf, cf.fields[i].descriptor_index),
+                    printAttributInfo(cf, cf.fields[i].attributes));
+        }
+        return out;
+    }
+    String printAttributInfo(ClassFile cf, ATTRIBUTE_info[] fi){
+        String out = "";
+        for(int i = 0; i < fi.length; ++i){
+            out += String.format("Attribute info %d: \n\tAttribute name index: %s\n\t" +
+                    "Attribute length %d\n\tinfo: %s\n", i, printUtf8(cf, fi[i].attribute_name_index),
+                    fi[i].attribute_length, new String(fi[i].info, StandardCharsets.UTF_8));
+        }
+        return out;
+    }
+    String printInterfaces(ClassFile cf){
+        String out = "";
+        for(int i = 0; i < cf.interfaces.length; ++i){
+            out += String.format("%d: %s, ", cf.interfaces[i], printClassInfo(cf, cf.interfaces[i]));
+        }
+        return out;
     }
     void printConstantPool(ClassFile cf){
         for(int i = 0; i < cf.constant_pool.length; ++i){
@@ -31,75 +80,101 @@ public class FileAnalyze {
                     CONSTANT_Class_info cci = (CONSTANT_Class_info) cf.constant_pool[i];
                     System.out.println(String.format("index %d, tag %x: %s, name index: %d, size: %d",
                             i + 1, cci.tag, cci.name, cci.name_index, cci.size));
+                    System.out.println(String.format("\t %s",
+                           printUtf8(cf, cci.name_index)));
                     break;
                 case (byte) 9:
                     CONSTANT_Fieldref_info cfi = (CONSTANT_Fieldref_info)cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, name and type index: %d, class index: %d," +
+                    System.out.println(String.format("index %d, tag %x: %s, name and type index: %d, class index: %d," +
                                     " size: %d",
                             i + 1, cfi.tag, cfi.name, cfi.name_and_type_index, cfi.class_index, cfi.size));
+                    System.out.println(String.format("\t  %s %s", printClassInfo(cf, cfi.class_index),
+                            printNameAndTag(cf, cfi.name_and_type_index) ));
                     break;
                 case (byte) 10:
                     CONSTANT_Methodref_info cmi = (CONSTANT_Methodref_info)cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, name and tag index: %d, class index: %d, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, name and tag index: %d, class index: %d, size: %d",
                             i + 1, cmi.tag, cmi.name, cmi.name_and_type_index, cmi.class_index, cmi.size));
+                    System.out.println(String.format("\t %s %s",
+                            printClassInfo(cf, cmi.class_index),
+                            printNameAndTag(cf, cmi.name_and_type_index) ));
                     break;
                 case (byte) 11:
                     CONSTANT_InterfaceMethodref_info cimi = (CONSTANT_InterfaceMethodref_info)cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, name and tag index: %d, class index: %d, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, name and tag index: %d, class index: %d, size: %d",
                             i + 1, cimi.tag, cimi.name, cimi.name_and_type_index, cimi.class_index, cimi.size));
                     break;
                 case (byte) 8:
                     CONSTANT_String_info csi = (CONSTANT_String_info)cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, string index: %d, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, string index: %d, size: %d",
                             i + 1, csi.tag, csi.name, csi.string_index, csi.size));
+                    System.out.println(String.format("\t %s",
+                            printString(cf, csi.string_index)));
                     break;
                 case (byte) 3:
                     CONSTANT_Integer_info cii = (CONSTANT_Integer_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, bytes: %x, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, bytes: %x, size: %d",
                             i + 1, cii.tag, cii.name, cii.bytes, cii.size));
                     break;
                 case (byte) 4:
                     CONSTANT_Float_info cfii = (CONSTANT_Float_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, bytes: %x, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, bytes: %x, size: %d",
                             i + 1, cfii.tag, cfii.name, cfii.bytes, cfii.size));
                     break;
                 case (byte) 5:
                     CONSTANT_Long_info cli = (CONSTANT_Long_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, high bytes: %x, low bytes: %x, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, high bytes: %x, low bytes: %x, size: %d",
                             i + 1, cli.tag, cli.name, cli.high_bytes, cli.low_bytes, cli.size));
                     break;
                 case (byte) 6:
                     CONSTANT_Double_info cdi = (CONSTANT_Double_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, high bytes: %x, low bytes: %x, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, high bytes: %x, low bytes: %x, size: %d",
                             i + 1, cdi.tag, cdi.name, cdi.high_bytes, cdi.low_bytes, cdi.size));
                     break;
                 case (byte) 12:
                     CONSTANT_NameAndType_info cnati = (CONSTANT_NameAndType_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, name index: %d, descriptor index: %d, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, name index: %d, descriptor index: %d, size: %d",
                             i + 1, cnati.tag, cnati.name, cnati.name_index, cnati.descriptor_index, cnati.size));
+                    System.out.println(String.format("\t %s %s",
+                            printUtf8(cf, cnati.name_index),
+                            printUtf8(cf, cnati.descriptor_index)));
                     break;
                 case (byte) 1:
                     CONSTANT_Utf8_info cu8i = (CONSTANT_Utf8_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, len byte arr: %d, byte string: \"%s\", size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, len byte arr: %d, byte string: \"%s\", size: %d",
                             i + 1, cu8i.tag, cu8i.name, cu8i.length, new String(cu8i.bytes, StandardCharsets.UTF_8), cu8i.size));
                     break;
                 case (byte) 15:
                     CONSTANT_MethodHandle_info cmhi = (CONSTANT_MethodHandle_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, reference index: %d, reference kind: %x, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, reference index: %d, reference kind: %x, size: %d",
                             i + 1, cmhi.tag, cmhi.name, cmhi.reference_index, cmhi.reference_kind, cmhi.size));
                     break;
                 case (byte) 16:
                     CONSTANT_MethodType_info cmti = (CONSTANT_MethodType_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, descriptor index: %d, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, descriptor index: %d, size: %d",
                             i + 1, cmti.tag, cmti.name, cmti.descriptor_index, cmti.size));
                     break;
                 case (byte) 18:
                     CONSTANT_InvokeDynamic_info cidi = (CONSTANT_InvokeDynamic_info) cf.constant_pool[i];
-                    System.out.println(String.format("index %d, tad %x: %s, name and type index: %d, bootstrap method attr index: %d, size: %d",
+                    System.out.println(String.format("index %d, tag %x: %s, name and type index: %d, bootstrap method attr index: %d, size: %d",
                             i + 1, cidi.tag, cidi.name, cidi.name_and_type_index, cidi.bootstrap_method_attr_index, cidi.size));
                     break;
             }
         }
+    }
+    String printUtf8(ClassFile cf, int i){
+        return new String(((CONSTANT_Utf8_info)cf.constant_pool[i - 1]).bytes, StandardCharsets.UTF_8);
+    }
+    String printString(ClassFile cf, int i){
+        return printUtf8(cf, i);
+    }
+    String printClassInfo(ClassFile cf, int i){
+        return printUtf8(cf, ((CONSTANT_Class_info)cf.constant_pool[i - 1]).name_index);
+    }
+    String printNameAndTag(ClassFile cf, int i){
+        return String.format("%s %s",
+                printUtf8(cf, ((CONSTANT_NameAndType_info)cf.constant_pool[i - 1]).name_index),
+                printUtf8(cf, ((CONSTANT_NameAndType_info)cf.constant_pool[i - 1]).descriptor_index));
     }
     void readStruct(ClassFile cf, byte[] b){
         int i = 0;
@@ -118,14 +193,17 @@ public class FileAnalyze {
         cf.interfaces = new short[cf.interfaces_count];
         i = readInterfaces(b, i, cf.interfaces);
         cf.fields_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
+        cf.fields = new FIELD_info[cf.fields_count];
         i = readFields(b, i += 2, cf.fields_count, cf.fields);
         cf.methods_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
+        cf.methods = new METHOD_info[cf.methods_count];
         i = readMethods(b, i += 2, cf.methods_count, cf.methods);
         cf.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
+        cf.attributes = new ATTRIBUTE_info[cf.attributes_count];
         i = readAttributeInfo(b, i += 2, cf.attributes_count, cf.attributes);
     }
     int readMethods(byte[] bytes, int i, short len, METHOD_info[] cfm){
-        cfm = new METHOD_info[len];
+  //      cfm = new METHOD_info[len];
         AtomicInteger ai = new AtomicInteger(i);
         for(int j = 0; j < len; ++j){
             cfm[j] = new METHOD_info(bytes, ai);
@@ -133,7 +211,7 @@ public class FileAnalyze {
         return ai.get();
     }
     int readFields(byte[] bytes, int i, short field_count, FIELD_info[] cff){
-        cff = new FIELD_info[field_count];
+        //cff = new FIELD_info[field_count];
         AtomicInteger ai = new AtomicInteger(i);
         for(int j = 0; j < field_count; ++j){
             cff[j] = new FIELD_info(bytes, ai);
@@ -155,7 +233,7 @@ public class FileAnalyze {
         return ii.get();
     }
     int readAttributeInfo(byte[] bytes, int i, short len, ATTRIBUTE_info[] attri){
-        attri = new ATTRIBUTE_info[len];
+     //   attri = new ATTRIBUTE_info[len];
         AtomicInteger ii = new AtomicInteger(i);
         for(int j = 0; j < len; ++j){
             attri[j] = new ATTRIBUTE_info(bytes, ii);
@@ -267,6 +345,48 @@ public class FileAnalyze {
                 break;
         }
         return constant_info;
+    }
+    private class AccessFlagsField{
+        final static short[] acf = {0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0040, 0x0080, 0x1000, 0x4000};
+        final static String[] acs = {"ACC_PUBLIC", "ACC_PRIVATE", "ACC_PROTECTED", "ACC_STATIC", "ACC_FINAL",
+        "ACC_VOLATILE", "ACC_TRANSIENT", "ACC_SYNTHETIC", "ACC_ENUM"};
+        static String getStringAccFlag(short a){
+            String out = "";
+            for(int i = 0; i < acf.length; ++i){
+                if((acf[i] & a) != 0){
+                    out += (acs[i] + " ");
+                }
+            }
+            return out;
+        }
+    }
+    private class AccessFlagsMethod{
+        final static short[] afm = {0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 0x0080, 0x0100, 0x0400, 0x0800, 0x1000};
+        final static String[] afs = {"ACC_PUBLIC", "ACC_PRIVATE", "ACC_PROTECTED", "ACC_STATIC", "ACC_FINAL", "ACC_SYNCHRONIZED",
+                "ACC_BRIDGE", "ACC_VARARGS", "ACC_NATIVE", "ACC_ABSTRACT", "ACC_STRICT", "ACC_SYNTHETIC"};
+        static String getStringAccFlag(short a){
+            String out = "";
+            for(int i = 0; i < afm.length; ++i){
+                if((afm[i] & a) != 0){
+                    out += (afs[i] + " ");
+                }
+            }
+            return out;
+        }
+    }
+    private class AccessFlags{
+        final static short[] acc = {0x0001, 0x0010, 0x0020, 0x0200, 0x0400, 0x1000, 0x2000, 0x4000};
+        final static String[] ass = {"ACC_PUBLIC", "ACC_FINAL", "ACC_SUPER", "ACC_INTERFACE",
+                "ACC_ABSTRACT", "ACC_SYNTHETIC", "ACC_ANNOTATION", "ACC_ENUM"};
+        static String getStringAccFlag(short a){
+            String out = "";
+            for(int i = 0; i < acc.length; ++i){
+                if((acc[i] & a) != 0){
+                    out += (ass[i] + " ");
+                }
+            }
+            return out;
+        }
     }
     private class METHOD_info{
         short access_flag;
