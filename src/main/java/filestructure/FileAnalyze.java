@@ -1,15 +1,17 @@
 package filestructure;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import filestructure.access.AccessFlags;
+import filestructure.access.AccessFlagsField;
+import filestructure.access.AccessFlagsMethod;
+import filestructure.attributes.AttributeInfo;
+import filestructure.classes.ClassFile;
+import filestructure.classes.FIELD_info;
+import filestructure.classes.METHOD_info;
+import filestructure.constants.*;
 import org.apache.commons.lang3.Conversion;
 
 public class FileAnalyze {
@@ -40,10 +42,10 @@ public class FileAnalyze {
         String out = "";
         for(int i = 0; i < mi.length; ++i){
             out += String.format("\n\tMethod %d, Access flags %x: %s, Name index %d: %s, Descriptor index %d: %s," +
-                            "Attributes count %d, Attributes: \n\t%s", i, mi[i].access_flag,
+                            "Attributes count %d, Attributes: \n\t%s\n\t Decode attribute: %s", i, mi[i].access_flag,
                     AccessFlagsMethod.getStringAccFlag(mi[i].access_flag), mi[i].name_index, printUtf8(cf, mi[i].name_index),
                     mi[i].descriptor_index, printUtf8(cf, mi[i].descriptor_index), mi[i].attributes_count,
-                    printAttributInfo(cf, mi[i].attributes));
+                    printAttributInfo(cf, mi[i].attributes), mi[i].getAttrString(cf));
         }
         return out;
     }
@@ -57,7 +59,7 @@ public class FileAnalyze {
         }
         return out;
     }
-    String printAttributInfo(ClassFile cf, ATTRIBUTE_info[] fi){
+    String printAttributInfo(ClassFile cf, AttributeInfo[] fi){
         String out = "";
         for(int i = 0; i < fi.length; ++i){
             out += String.format("Attribute info %d: \n\tAttribute name index: %s\n\t" +
@@ -162,7 +164,7 @@ public class FileAnalyze {
             }
         }
     }
-    String printUtf8(ClassFile cf, int i){
+    public static String printUtf8(ClassFile cf, int i){
         return new String(((CONSTANT_Utf8_info)cf.constant_pool[i - 1]).bytes, StandardCharsets.UTF_8);
     }
     String printString(ClassFile cf, int i){
@@ -199,7 +201,7 @@ public class FileAnalyze {
         cf.methods = new METHOD_info[cf.methods_count];
         i = readMethods(b, i += 2, cf.methods_count, cf.methods);
         cf.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(b, i, (short) 0,0, 2));
-        cf.attributes = new ATTRIBUTE_info[cf.attributes_count];
+        cf.attributes = new AttributeInfo[cf.attributes_count];
         i = readAttributeInfo(b, i += 2, cf.attributes_count, cf.attributes);
     }
     int readMethods(byte[] bytes, int i, short len, METHOD_info[] cfm){
@@ -232,33 +234,15 @@ public class FileAnalyze {
         }
         return ii.get();
     }
-    int readAttributeInfo(byte[] bytes, int i, short len, ATTRIBUTE_info[] attri){
+    public static int readAttributeInfo(byte[] bytes, int i, short len, AttributeInfo[] attri){
      //   attri = new ATTRIBUTE_info[len];
         AtomicInteger ii = new AtomicInteger(i);
         for(int j = 0; j < len; ++j){
-            attri[j] = new ATTRIBUTE_info(bytes, ii);
+            attri[j] = new AttributeInfo(bytes, ii);
         }
         return ii.get();
     }
-    private class ClassFile{
-        int struct_size = 16;
-        int magic;
-        short minor_version;
-        short major_version;
-        short constant_pool_count;
-        CONSTANT_info constant_pool[];//[constant_pool_count-1];
-        short access_flags;
-        short this_class;
-        short super_class;
-        short interfaces_count;
-        short interfaces[];
-        short fields_count;
-        FIELD_info fields[];
-        short methods_count;
-        METHOD_info methods[];//[methods_count];
-        short attributes_count;
-        ATTRIBUTE_info attributes[];//[attributes_count];
-    }
+
     CONSTANT_info getConstant(byte[] bytes, AtomicInteger ii){
         //int i = ii;
         byte tag = bytes[ii.get()];
@@ -324,7 +308,7 @@ public class FileAnalyze {
                 short lenb = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 1, (short) 0,0, 2));
                 constant_info = new CONSTANT_Utf8_info(tag,
                         lenb,
-                                                                Arrays.copyOfRange(bytes, ii.get() + 3, lenb + ii.get() + 3));
+                        Arrays.copyOfRange(bytes, ii.get() + 3, lenb + ii.get() + 3));
                 ii.set(ii.get() + 3 + lenb);
                 break;
             case (byte) 15:
@@ -345,247 +329,5 @@ public class FileAnalyze {
                 break;
         }
         return constant_info;
-    }
-    private class AccessFlagsField{
-        final static short[] acf = {0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0040, 0x0080, 0x1000, 0x4000};
-        final static String[] acs = {"ACC_PUBLIC", "ACC_PRIVATE", "ACC_PROTECTED", "ACC_STATIC", "ACC_FINAL",
-        "ACC_VOLATILE", "ACC_TRANSIENT", "ACC_SYNTHETIC", "ACC_ENUM"};
-        static String getStringAccFlag(short a){
-            String out = "";
-            for(int i = 0; i < acf.length; ++i){
-                if((acf[i] & a) != 0){
-                    out += (acs[i] + " ");
-                }
-            }
-            return out;
-        }
-    }
-    private class AccessFlagsMethod{
-        final static short[] afm = {0x0001, 0x0002, 0x0004, 0x0008, 0x0010, 0x0020, 0x0040, 0x0080, 0x0100, 0x0400, 0x0800, 0x1000};
-        final static String[] afs = {"ACC_PUBLIC", "ACC_PRIVATE", "ACC_PROTECTED", "ACC_STATIC", "ACC_FINAL", "ACC_SYNCHRONIZED",
-                "ACC_BRIDGE", "ACC_VARARGS", "ACC_NATIVE", "ACC_ABSTRACT", "ACC_STRICT", "ACC_SYNTHETIC"};
-        static String getStringAccFlag(short a){
-            String out = "";
-            for(int i = 0; i < afm.length; ++i){
-                if((afm[i] & a) != 0){
-                    out += (afs[i] + " ");
-                }
-            }
-            return out;
-        }
-    }
-    private class AccessFlags{
-        final static short[] acc = {0x0001, 0x0010, 0x0020, 0x0200, 0x0400, 0x1000, 0x2000, 0x4000};
-        final static String[] ass = {"ACC_PUBLIC", "ACC_FINAL", "ACC_SUPER", "ACC_INTERFACE",
-                "ACC_ABSTRACT", "ACC_SYNTHETIC", "ACC_ANNOTATION", "ACC_ENUM"};
-        static String getStringAccFlag(short a){
-            String out = "";
-            for(int i = 0; i < acc.length; ++i){
-                if((acc[i] & a) != 0){
-                    out += (ass[i] + " ");
-                }
-            }
-            return out;
-        }
-    }
-    private class METHOD_info{
-        short access_flag;
-        short name_index;
-        short descriptor_index;
-        short attributes_count;
-        ATTRIBUTE_info attributes[];
-        METHOD_info(byte[] bytes, AtomicInteger ii){
-            this.access_flag = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get(), (short) 0,0, 2));
-            this.name_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 2, (short) 0,0, 2));
-            this.descriptor_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 4, (short) 0,0, 2));
-            this.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 6, (short) 0,0, 2));
-            attributes = new ATTRIBUTE_info[this.attributes_count];
-            ii.set(ii.get() + 8);
-            for(int j = 0; j < this.attributes_count; ++j){
-                attributes[j] = new ATTRIBUTE_info(bytes, ii);
-            }
-        }
-    }
-    private class FIELD_info{
-        short access_flag;
-        short name_index;
-        short descriptor_index;
-        short attributes_count;
-        ATTRIBUTE_info attributes[];
-        FIELD_info(byte[] bytes, AtomicInteger ii){
-            this.access_flag = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get(), (short) 0,0, 2));
-            this.name_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 2, (short) 0,0, 2));
-            this.descriptor_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 4, (short) 0,0, 2));
-            this.attributes_count = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get() + 6, (short) 0,0, 2));
-            attributes = new ATTRIBUTE_info[this.attributes_count];
-            ii.set(ii.get() + 8);
-            for(int j = 0; j < this.attributes_count; ++j){
-                attributes[j] = new ATTRIBUTE_info(bytes, ii);
-            }
-        }
-    }
-    private class ATTRIBUTE_info{
-        short attribute_name_index;
-        int attribute_length;
-        byte info[];//size = attribute_length
-        ATTRIBUTE_info(byte[] bytes, AtomicInteger ii){
-            this.attribute_name_index = Short.reverseBytes(Conversion.byteArrayToShort(bytes, ii.get(), (short) 0,0, 2));
-            this.attribute_length = Integer.reverseBytes(Conversion.byteArrayToInt(bytes, ii.get() + 2, 0, 0, 4));
-            ii.set(ii.get() + 6);
-            info = new byte[this.attribute_length];
-            for(int j = 0; j < this.attribute_length; ++j){
-                info[j] = bytes[ii.get() + j];
-            }
-            ii.set(ii.get() + this.attribute_length);
-        }
-    }
-    private abstract class CONSTANT_info{
-        byte tag;
-        int size = 1;
-    }
-    private class CONSTANT_Class_info extends CONSTANT_info{
-        String name = "CONSTANT_Class";
-        short name_index = 0;
-        CONSTANT_Class_info(byte ta, short b){
-            size += 2;
-            tag = ta;
-            name_index = b;
-        }
-    }
-    private class CONSTANT_Fieldref_info extends CONSTANT_info {
-        String name = "CONSTANT_Fieldref";
-        short class_index;
-        short name_and_type_index;
-        CONSTANT_Fieldref_info(byte ta, short a, short b){
-            size += 4;
-            tag = ta;
-            class_index = a;
-            name_and_type_index = b;
-        }
-    }
-    private class CONSTANT_Methodref_info extends CONSTANT_info {
-        String name = "CONSTANT_Methodref";
-        short class_index;
-        short name_and_type_index;
-        CONSTANT_Methodref_info(byte ta, short a, short b){
-            size += 4;
-            tag = ta;
-            class_index = a;
-            name_and_type_index = b;
-        }
-    }
-    private class CONSTANT_InterfaceMethodref_info extends CONSTANT_info {
-        String name = "CONSTANT_IntefaceMethodref";
-        short class_index;
-        short name_and_type_index;
-        CONSTANT_InterfaceMethodref_info(byte ta, short a, short b){
-            size += 4;
-            tag = ta;
-            class_index = a;
-            name_and_type_index = b;
-        }
-    }
-    private class CONSTANT_String_info extends CONSTANT_info {
-        String name = "CONSTANT_String";
-        short string_index;
-        CONSTANT_String_info(byte ta, short a){
-            size += 2;
-            tag = ta;
-            string_index = a;
-        }
-    }
-    private class CONSTANT_Integer_info extends CONSTANT_info {
-        String name = "CONSTANT_Integer";
-        int bytes;
-        CONSTANT_Integer_info(byte ta, int a){
-            size += 4;
-            tag = ta;
-            bytes = a;
-        }
-    }
-    private class CONSTANT_Float_info extends CONSTANT_info {
-        String name = "CONSTANT_Float";
-        int bytes;
-        CONSTANT_Float_info(byte ta, int a){
-            size += 4;
-            tag = ta;
-            bytes = a;
-        }
-    }
-    private class CONSTANT_Long_info extends CONSTANT_info {
-        String name = "CONSTANT_Long";
-        int high_bytes;
-        int low_bytes;
-        CONSTANT_Long_info(byte ta, int a, int b){
-            size += 8;
-            tag = ta;
-            high_bytes = a;
-            low_bytes = b;
-        }
-    }
-    private class CONSTANT_Double_info extends CONSTANT_info {
-        String name = "CONSTANT_Double";
-        int high_bytes;
-        int low_bytes;
-        CONSTANT_Double_info(byte ta, int a, int b){
-            size += 8;
-            tag = ta;
-            high_bytes = a;
-            low_bytes = b;
-        }
-    }
-    private class CONSTANT_NameAndType_info extends CONSTANT_info {
-        String name = "CONSTANT_NameAndType";
-        short name_index;
-        short descriptor_index;
-        CONSTANT_NameAndType_info(byte ta, short a, short b){
-            size += 4;
-            tag = ta;
-            name_index = a;
-            descriptor_index = b;
-        }
-    }
-    private class CONSTANT_Utf8_info extends CONSTANT_info {
-        String name = "CONSTANT_Utf8";
-        short length;
-        byte bytes[];
-        CONSTANT_Utf8_info(byte ta, short a, byte[] by){
-            size = size + 2 + a;
-            tag = ta;
-            length = a;
-            //bytes = new byte[length];
-            bytes = by;
-        }
-    }
-    private class CONSTANT_MethodHandle_info extends CONSTANT_info {
-        String name = "CONSTANT_MethodHandle";
-        byte reference_kind;
-        short reference_index;
-        CONSTANT_MethodHandle_info(byte ta, byte a, short b){
-            size += 3;
-            tag = ta;
-            reference_kind = a;
-            reference_index = b;
-        }
-    }
-    private class CONSTANT_MethodType_info extends CONSTANT_info {
-        String name = "CONSTANT_MethodType";
-        short descriptor_index;
-        CONSTANT_MethodType_info(byte ta, short a){
-            size += 2;
-            tag = ta;
-            descriptor_index = a;
-        }
-    }
-    private class CONSTANT_InvokeDynamic_info extends CONSTANT_info {
-        String name = "CONSTANT_InvokeDynamic";
-        short bootstrap_method_attr_index;
-        short name_and_type_index;
-        CONSTANT_InvokeDynamic_info(byte ta, short a, short b){
-            size += 4;
-            tag = ta;
-            bootstrap_method_attr_index = a;
-            name_and_type_index = b;
-        }
     }
 }
