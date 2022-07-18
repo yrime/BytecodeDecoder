@@ -23,4 +23,7 @@ public class FIELD_info {
             attributes[j] = new AttributeInfo(bytes, ii);
         }
     }
+    public String getAttrString(ClassFile cf){
+        return AttributeInfo.getAttrString(cf, this.attributes);
+    }
 }

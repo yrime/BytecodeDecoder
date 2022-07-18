@@ -6,7 +6,7 @@ import org.apache.commons.lang3.Conversion;
 import java.util.Arrays;
 
 public class annotation {
-    int size = 4;
+    public int size = 4;
     short type_index;
     short num_element_value_pairs;
     elemet_value_pairs elemet_value_pairs[];//[num_element_value_pairs]

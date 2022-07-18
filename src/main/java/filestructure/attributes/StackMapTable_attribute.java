@@ -10,24 +10,22 @@ import org.apache.commons.lang3.Conversion;
 import java.util.Arrays;
 
 public class StackMapTable_attribute {
-    short attribute_name_index;
-    int attribute_length;
+ //   short attribute_name_index;
+   // int attribute_length;
     short number_of_entries;
     STACK_MAP_FRAME entries[];//[number_of_entries];
     public StackMapTable_attribute(byte[] info){
-        attribute_name_index = Short.reverseBytes(Conversion.byteArrayToShort(
+    /*    attribute_name_index = Short.reverseBytes(Conversion.byteArrayToShort(
                 info, 0, (short)0, 0, 2));
         attribute_length = Integer.reverseBytes(Conversion.byteArrayToInt(
                 info, 2, 0,0, 4));
-        number_of_entries = Short.reverseBytes(Conversion.byteArrayToShort(
-                info, 6, (short)0, 0, 2));
+      */  number_of_entries = Short.reverseBytes(Conversion.byteArrayToShort(
+                info, 0, (short)0, 0, 2));
         entries = new STACK_MAP_FRAME[number_of_entries];
-        setEntries(entries, Arrays.copyOfRange(info, 8, info.length));
+        setEntries(entries, Arrays.copyOfRange(info, 2, info.length));
     }
-    public String getAttr(ClassFile cf) {
-        return String.format("\n\t\t\tStackMapTable attribute:\n\t\t\t\tattribute_name_index %d: %s" +
-                "\n\t\t\t\tattribute_length %d\n\t\t\t\tnumber_of_entries %d\n\t\t\t\tentries: %s",
-                attribute_name_index, FileAnalyze.printUtf8(cf, attribute_name_index), attribute_length,
+    public String getAttrStr(ClassFile cf) {
+        return String.format("\n\t\tAttribute \"StackMapTable\":\n\t\t\tnumber_of_entries %d\n\t\t\tentries: %s",
                 number_of_entries, getFramesStr());
     }
     private String getFramesStr(){

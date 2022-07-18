@@ -7,26 +7,25 @@ import org.apache.commons.lang3.Conversion;
 import java.util.Arrays;
 
 public class LocalVariableTable_attribute {
-    short attribute_name_index;
-    int attribute_length;
+   // short attribute_name_index;
+    //int attribute_length;
     short local_variable_table_length;
     local_variable_table local_variable_table[];//[local_variable_table_length]
     public LocalVariableTable_attribute(byte[] info){
-        attribute_name_index = Short.reverseBytes(Conversion.byteArrayToShort(
+     /*   attribute_name_index = Short.reverseBytes(Conversion.byteArrayToShort(
                 info, 0, (short)0, 0, 2));
         attribute_length = Integer.reverseBytes(Conversion.byteArrayToInt(
                 info, 2, (short)0, 0, 4));
-        local_variable_table_length = Short.reverseBytes(Conversion.byteArrayToShort(
-                info, 6, (short)0, 0, 2));
+     */ local_variable_table_length = Short.reverseBytes(Conversion.byteArrayToShort(
+                info, 0, (short)0, 0, 2));
         local_variable_table = new local_variable_table[local_variable_table_length];
-        for(int i = 0, j = 8; i < local_variable_table_length; ++i){
+        for(int i = 0, j = 2; i < local_variable_table_length; ++i){
             local_variable_table[i] = new local_variable_table(Arrays.copyOfRange(info, j, j += 10));
         }
     }
-    public String getAttr(ClassFile cf){
-        return String.format("\n\t\t\tLocalVariableTable attribute:\n\t\t\t\tattribute_name_index %d: %s" +
-                        "\n\t\t\t\tattribute_length %d\n\t\t\t\tlocal_variable_table_length %d\n\t\t\t\tlocal_variable_table: %s",
-                attribute_name_index, FileAnalyze.printUtf8(cf, attribute_name_index), attribute_length, local_variable_table_length, printlocalVar(cf));
+    public String getAttrStr(ClassFile cf) {
+        return String.format("\n\t\tAttribute \"LocalVariableTable\":\n\t\t\tlocal_variable_table_length %d\n\t\t\tlocal_variable_table: %s",
+                local_variable_table_length, printlocalVar(cf));
     }
     private String printlocalVar(ClassFile cf){
         String out = "";

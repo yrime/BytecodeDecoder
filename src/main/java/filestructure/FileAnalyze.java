@@ -42,7 +42,8 @@ public class FileAnalyze {
         String out = "";
         for(int i = 0; i < mi.length; ++i){
             out += String.format("\n\tMethod %d, Access flags %x: %s, Name index %d: %s, Descriptor index %d: %s," +
-                            "Attributes count %d, Attributes: \n\t%s\n\t Decode attribute: %s", i, mi[i].access_flag,
+                            "Attributes count %d, Attributes: \n\t%s" +
+                            "\n\t Decode attribute: %s", i, mi[i].access_flag,
                     AccessFlagsMethod.getStringAccFlag(mi[i].access_flag), mi[i].name_index, printUtf8(cf, mi[i].name_index),
                     mi[i].descriptor_index, printUtf8(cf, mi[i].descriptor_index), mi[i].attributes_count,
                     printAttributInfo(cf, mi[i].attributes), mi[i].getAttrString(cf));
@@ -52,10 +53,11 @@ public class FileAnalyze {
     String printFelds(ClassFile cf){
         String out = "";
         for(int i = 0; i < cf.fields.length; ++i){
-            out += String.format("%d -- Access flags field %x: %s, Name index %d: %s, Descriptor index %d: %s, Attribute info: %s\n",
+            out += String.format("%d -- Access flags field %x: %s, Name index %d: %s," +
+                            " Descriptor index %d: %s, Attribute info: %s\n\n\t Decode attribute: %s",
                     i, cf.fields[i].access_flag, AccessFlagsField.getStringAccFlag(cf.fields[i].access_flag), cf.fields[i].name_index,
                     printUtf8(cf, cf.fields[i].name_index), cf.fields[i].descriptor_index, printUtf8(cf, cf.fields[i].descriptor_index),
-                    printAttributInfo(cf, cf.fields[i].attributes));
+                    printAttributInfo(cf, cf.fields[i].attributes), cf.fields[i].getAttrString(cf));
         }
         return out;
     }
