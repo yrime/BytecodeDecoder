@@ -63,7 +63,7 @@ public class Code_attribute {
     String printCodeInHex(){
         String out = "";
         for (int i = 0; i < this.code.length; ++i){
-            out += String.format("%x", this.code[i]);
+            out += String.format("-%x-", this.code[i]);
         }
         return out;
     }
@@ -74,7 +74,7 @@ public class Code_attribute {
                         "\n\t\t\tcode_length: %d\n\t\t\tcode: %s\n\t\t\tattribute_count: %d\n\t\t\t" +
                         "attributes: %s",
                 this.max_stack, this.max_locals, this.exception_table_length, printExceptions(),
-                this.code_length, printCodeInHex(), this.attributes_count, this.attributes);
+                this.code_length, printCodeInHex(), this.attributes_count, AttributeInfo.getAttrString(cf, this.attributes));
     }
     public void print(ClassFile cf){
         System.out.println(getAttrStr(cf));

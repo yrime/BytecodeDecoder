@@ -84,7 +84,7 @@ public class FileAnalyze {
                     CONSTANT_Class_info cci = (CONSTANT_Class_info) cf.constant_pool[i];
                     System.out.println(String.format("index %d, tag %x: %s, name index: %d, size: %d",
                             i + 1, cci.tag, cci.name, cci.name_index, cci.size));
-                    System.out.println(String.format("\t %s",
+                       System.out.println(String.format("\t %s",
                            printUtf8(cf, cci.name_index)));
                     break;
                 case (byte) 9:
@@ -129,11 +129,13 @@ public class FileAnalyze {
                     CONSTANT_Long_info cli = (CONSTANT_Long_info) cf.constant_pool[i];
                     System.out.println(String.format("index %d, tag %x: %s, high bytes: %x, low bytes: %x, size: %d",
                             i + 1, cli.tag, cli.name, cli.high_bytes, cli.low_bytes, cli.size));
+                    ++i;
                     break;
                 case (byte) 6:
                     CONSTANT_Double_info cdi = (CONSTANT_Double_info) cf.constant_pool[i];
                     System.out.println(String.format("index %d, tag %x: %s, high bytes: %x, low bytes: %x, size: %d",
                             i + 1, cdi.tag, cdi.name, cdi.high_bytes, cdi.low_bytes, cdi.size));
+                    ++i;
                     break;
                 case (byte) 12:
                     CONSTANT_NameAndType_info cnati = (CONSTANT_NameAndType_info) cf.constant_pool[i];
@@ -233,6 +235,9 @@ public class FileAnalyze {
         AtomicInteger ii = new AtomicInteger(i);
         for (int j = 0; j < size; ++j){
             constant_pool[j] = getConstant(bytes, ii);
+            if((constant_pool[j].tag == (byte) 6)||(constant_pool[j].tag == (byte) 5)){
+                ++j;
+            }
         }
         return ii.get();
     }
