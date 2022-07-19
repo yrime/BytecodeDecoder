@@ -68,7 +68,7 @@ public class FileAnalyze {
                     "Attribute length %d\n\tinfo: %s\n", i, printUtf8(cf, fi[i].attribute_name_index),
                     fi[i].attribute_length, new String(fi[i].info, StandardCharsets.UTF_8));
         }
-        return out;
+        return out + " " + AttributeInfo.getAttrString(cf, fi);
     }
     String printInterfaces(ClassFile cf){
         String out = "";

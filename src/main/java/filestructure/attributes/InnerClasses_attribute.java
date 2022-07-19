@@ -46,11 +46,11 @@ public class InnerClasses_attribute {
             this.inner_class_access_flags = Short.reverseBytes(Conversion.byteArrayToShort(bytes, 6, (short) 0, 0, 2));
         }
         String getAttr(ClassFile cf){
-            return String.format("\n\t\t\t\t\tClass:\n\t\t\t\t\t\tinner_class_info_index %d: %s\n\t\t\t\t\t\t" +
-                    "outer_class_info_index %d: %s\n\t\t\t\t\t\ttinner_name_index %d: %s\n\t\t\t\t\t\t" +
+            return String.format("\n\t\t\t\t\tClass:\n\t\t\t\t\t\tinner_class_info_index %d\n\t\t\t\t\t\t" +
+                    "outer_class_info_index %d\n\t\t\t\t\t\tinner_name_index %d: %s\n\t\t\t\t\t\t" +
                     "inner_class_access_flags %x: %s",
-                    this.inner_class_info_index, FileAnalyze.printUtf8(cf, this.inner_class_info_index),
-                    this.outer_class_info_index, FileAnalyze.printUtf8(cf, this.outer_class_info_index),
+                    this.inner_class_info_index,
+                    this.outer_class_info_index,
                     this.inner_name_index, FileAnalyze.printUtf8(cf, this.inner_name_index),
                     this.inner_class_access_flags, AccessflagsClass.getStringAccFlag(this.inner_class_access_flags));
         }
